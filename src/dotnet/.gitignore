@@ -1,0 +1,10 @@
+[Visual Studio Projects]
+.vs/*
+*/.vs/*
+
+[Visual Studio Code]
+.vscode/*
+
+[.NET Projects]
+*/bin/*
+*/obj/*
