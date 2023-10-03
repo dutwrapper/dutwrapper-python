@@ -1,6 +1,6 @@
 name: dutwrapper
-description: DUT Wrapper project. For dart programming language.
-version: 0.3.1
+description: This library provides wrapper (for this repository - crawl data from a page) for access for some features in DUT Student page - Da Nang University of Technology.
+version: 0.3.4
 homepage:
 
 environment:

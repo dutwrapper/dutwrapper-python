@@ -1,11 +1,13 @@
-import 'global_obj_var.dart';
+import 'enums.dart';
+import 'range_class.dart';
+import 'subject_group_item.dart';
 
 class NewsLinkItem {
-  String text;
-  int position;
-  String url;
+  final String text;
+  final int position;
+  final String url;
 
-  NewsLinkItem({
+  const NewsLinkItem({
     required this.text,
     required this.position,
     required this.url,
@@ -24,7 +26,7 @@ class NewsSubject extends NewsGlobal {
   List<SubjectGroupItem> affectedClasses = [];
   int affectedDate = 0;
   LessonStatus lessonStatus = LessonStatus.unknown;
-  IntRange affectedLessons = IntRange();
+  RangeInt affectedLessons = RangeInt(start: 0, end: 0);
   String affectedRoom = '';
   String lecturerName = '';
   LecturerGender lecturerGender = LecturerGender.other;

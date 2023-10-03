@@ -1,4 +1,4 @@
-library dutapi;
+library dutwrapper;
 
 import 'dart:convert';
 
@@ -6,11 +6,15 @@ import 'package:html/parser.dart';
 import 'package:http/http.dart' as http;
 
 import 'model/account_obj.dart';
-import 'model/global_obj_var.dart';
+import 'model/enums.dart';
+import 'model/global_variables.dart';
+import 'model/range_class.dart';
+import 'model/request_result.dart';
+import 'model/subject_code_item.dart';
 
 class Account {
-  static Future<RequestStatus> generateSessionID({int timeout = 60}) async {
-    RequestStatus ars = RequestStatus();
+  static Future<RequestResult> generateSessionID({int timeout = 60}) async {
+    RequestResult ars = const RequestResult();
 
     try {
       final response = await http
@@ -31,26 +35,29 @@ class Account {
         for (String item in cookieHeaderSplit) {
           if (item.contains('ASP.NET_SessionId')) {
             List<String> sessionIdSplit = item.split('=');
-            ars.sessionId = sessionIdSplit[1];
+            ars = ars.clone(sessionId: sessionIdSplit[1]);
           }
         }
       }
 
-      ars.statusCode = response.statusCode;
-      ars.requestCode = [200, 204].contains(ars.statusCode)
-          ? RequestCode.successful
-          : RequestCode.failed;
+      ars = ars.clone(
+        statusCode: response.statusCode,
+        requestCode: [200, 204].contains(response.statusCode)
+            ? RequestCode.successful
+            : RequestCode.failed,
+      );
     } catch (ex) {
-      print(ex);
-      ars.requestCode = RequestCode.nointernet;
+      // print(ex);
+      ars = ars.clone(requestCode: RequestCode.exceptionThrown);
     }
     return ars;
   }
 
-  static Future<RequestStatus> isLoggedIn(
-      {required String sessionId, int timeout = 60}) async {
-    RequestStatus ars = RequestStatus();
-    ars.sessionId = sessionId;
+  static Future<RequestResult> isLoggedIn({
+    required String sessionId,
+    int timeout = 60,
+  }) async {
+    RequestResult ars = RequestResult(sessionId: sessionId);
 
     Map<String, String> header = <String, String>{
       'cookie': 'ASP.NET_SessionId=$sessionId;'
@@ -59,26 +66,30 @@ class Account {
     try {
       final response = await http
           .get(
-              Uri.parse(
-                  'http://sv.dut.udn.vn/WebAjax/evLopHP_Load.aspx?E=TTKBLoad&Code=2210'),
-              headers: header)
+            Uri.parse(
+                'http://sv.dut.udn.vn/WebAjax/evLopHP_Load.aspx?E=TTKBLoad&Code=2010'),
+            headers: header,
+          )
           .timeout(Duration(seconds: timeout));
-      ars.statusCode = response.statusCode;
-      ars.requestCode = [200, 204].contains(ars.statusCode)
-          ? RequestCode.successful
-          : RequestCode.failed;
+      ars = ars.clone(
+        statusCode: response.statusCode,
+        requestCode: [200, 204].contains(response.statusCode)
+            ? RequestCode.successful
+            : RequestCode.failed,
+      );
     } catch (ex) {
-      print(ex);
-      ars.requestCode = RequestCode.nointernet;
+      // print(ex);
+      ars = ars.clone(requestCode: RequestCode.exceptionThrown);
     }
     return ars;
   }
 
-  static Future<RequestStatus> login(
-      {required String sessionId,
-      required String userId,
-      required String password,
-      int timeout = 60}) async {
+  static Future<RequestResult> login({
+    required String sessionId,
+    required String userId,
+    required String password,
+    int timeout = 60,
+  }) async {
     // Header data
     Map<String, String> header = <String, String>{
       'cookie': 'ASP.NET_SessionId=$sessionId;',
@@ -87,12 +98,12 @@ class Account {
 
     // Post data
     var postData = <String, String>{
-      Variables.loginViewStateHeader: Variables.loginViewStateValue,
-      Variables.loginViewStateGeneratorHeader:
-          Variables.loginViewStateGeneratorValue,
-      Variables.loginUserHeader: userId,
-      Variables.loginPassHeader: password,
-      Variables.loginBtnHeader: Variables.loginBtnValue
+      GlobalVariables.loginViewStateHeader: GlobalVariables.loginViewStateValue,
+      GlobalVariables.loginViewStateGeneratorHeader:
+          GlobalVariables.loginViewStateGeneratorValue,
+      GlobalVariables.loginUserHeader: userId,
+      GlobalVariables.loginPassHeader: password,
+      GlobalVariables.loginBtnHeader: GlobalVariables.loginBtnValue
     };
     try {
       await http
@@ -103,19 +114,19 @@ class Account {
           .timeout(Duration(seconds: timeout));
       return await isLoggedIn(sessionId: sessionId);
     } catch (ex) {
-      print(ex);
-      RequestStatus ars = RequestStatus();
-      ars.sessionId = sessionId;
-
-      ars.requestCode = RequestCode.nointernet;
-      return ars;
+      // print(ex);
+      return RequestResult(
+        sessionId: sessionId,
+        requestCode: RequestCode.exceptionThrown,
+      );
     }
   }
 
-  static Future<RequestStatus> logout(
-      {required String sessionId, int timeout = 60}) async {
-    RequestStatus ars = RequestStatus();
-    ars.sessionId = sessionId;
+  static Future<RequestResult> logout({
+    required String sessionId,
+    int timeout = 60,
+  }) async {
+    RequestResult ars = RequestResult(sessionId: sessionId);
 
     // Header data
     Map<String, String> header = <String, String>{
@@ -127,30 +138,34 @@ class Account {
           .get(Uri.parse('http://sv.dut.udn.vn/PageLogout.aspx'),
               headers: header)
           .timeout(Duration(seconds: timeout));
-      RequestStatus loginStatus = await isLoggedIn(sessionId: sessionId);
-      ars.statusCode = loginStatus.statusCode == 200 ? 404 : 200;
-      ars.requestCode = loginStatus.requestCode == RequestCode.successful
-          ? RequestCode.failed
-          : loginStatus.requestCode == RequestCode.failed
-              ? RequestCode.successful
-              : loginStatus.requestCode;
+      RequestResult loginStatus = await isLoggedIn(sessionId: sessionId);
+      ars = ars.clone(
+        statusCode: loginStatus.statusCode == 404 ? 200 : 404,
+        requestCode: loginStatus.requestCode == RequestCode.successful
+            ? RequestCode.failed
+            : loginStatus.requestCode == RequestCode.failed
+                ? RequestCode.successful
+                : loginStatus.requestCode,
+      );
     } catch (ex) {
-      ars.requestCode = RequestCode.nointernet;
+      // print(ex);
+      ars.clone(requestCode: RequestCode.exceptionThrown);
     }
 
     return ars;
   }
 
-  static Future<RequestStatus<List<SubjectScheduleItem>>> getSubjectSchedule(
-      {required String sessionId,
-      required int year,
-      required int semester,
-      int timeout = 60}) async {
-    RequestStatus<List<SubjectScheduleItem>> ars =
-        RequestStatus<List<SubjectScheduleItem>>();
+  static Future<RequestResult<List<SubjectScheduleItem>>> getSubjectSchedule({
+    required String sessionId,
+    required int year,
+    required int semester,
+    int timeout = 60,
+  }) async {
+    RequestResult<List<SubjectScheduleItem>> ars =
+        RequestResult<List<SubjectScheduleItem>>(data: []);
 
     // Create object if null
-    ars.data ??= [];
+    // ars.data ??= [];
 
     try {
       if (semester <= 0 || semester > 3) {
@@ -208,10 +223,11 @@ class Account {
                           1;
                 }
                 // Lesson
-                subjectStudyItem.lesson.start =
-                    int.tryParse(element.split(',')[1].split('-')[0]) ?? -1;
-                subjectStudyItem.lesson.end =
-                    int.tryParse(element.split(',')[1].split('-')[1]) ?? -1;
+                subjectStudyItem.lesson = RangeInt(
+                  start:
+                      int.tryParse(element.split(',')[1].split('-')[0]) ?? -1,
+                  end: int.tryParse(element.split(',')[1].split('-')[1]) ?? -1,
+                );
                 // Room
                 subjectStudyItem.room = element.split(',')[2];
                 // Add to item
@@ -221,9 +237,10 @@ class Account {
             // Processing with Week list
             if (schCell[8].text.isNotEmpty) {
               schCell[8].text.split(';').forEach((element) {
-                IntRange weekItem = IntRange();
-                weekItem.start = int.tryParse(element.split('-')[0]) ?? -1;
-                weekItem.end = int.tryParse(element.split('-')[1]) ?? -1;
+                RangeInt weekItem = RangeInt(
+                  start: int.tryParse(element.split('-')[0]) ?? -1,
+                  end: int.tryParse(element.split('-')[1]) ?? -1,
+                );
                 item.subjectStudy.weekList.add(weekItem);
               });
             }
@@ -296,15 +313,17 @@ class Account {
         }
       }
 
-      ars.statusCode = response.statusCode;
-      ars.requestCode = [200, 204].contains(ars.statusCode)
-          ? RequestCode.successful
-          : RequestCode.failed;
+      ars = ars.clone(
+        statusCode: response.statusCode,
+        requestCode: [200, 204].contains(response.statusCode)
+            ? RequestCode.successful
+            : RequestCode.failed,
+      );
     } on ArgumentError {
-      ars.requestCode = RequestCode.invalid;
+      ars = ars.clone(requestCode: RequestCode.invalid);
     } catch (ex) {
-      print(ex);
-      ars.requestCode = RequestCode.nointernet;
+      // print(ex);
+      ars = ars.clone(requestCode: RequestCode.exceptionThrown);
     }
 
     return ars;

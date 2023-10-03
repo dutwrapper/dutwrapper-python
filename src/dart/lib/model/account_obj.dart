@@ -1,4 +1,5 @@
-import 'global_obj_var.dart';
+import 'subject_code_item.dart';
+import 'range_class.dart';
 
 class SubjectScheduleItem {
   SubjectCodeItem id = SubjectCodeItem();
@@ -20,12 +21,12 @@ class SubjectExamItem {
 
 class SubjectStudyList {
   List<SubjectStudyItem> subjectStudyList = [];
-  List<IntRange> weekList = [];
+  List<RangeInt> weekList = [];
 }
 
 class SubjectStudyItem {
   // 0: Sunday, 1: Monday -> 6: Saturday
   int dayOfWeek = 0;
-  IntRange lesson = IntRange();
+  RangeInt lesson = RangeInt(start: 0, end: 0);
   String room = '';
 }
