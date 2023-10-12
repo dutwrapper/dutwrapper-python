@@ -2,7 +2,6 @@ package io.dutwrapperlib.dutwrapper;
 
 import org.junit.jupiter.api.Test;
 
-import io.dutwrapperlib.dutwrapper.News;
 import io.dutwrapperlib.dutwrapper.objects.enums.LessonStatus;
 import io.dutwrapperlib.dutwrapper.objects.news.NewsSubjectItem;
 

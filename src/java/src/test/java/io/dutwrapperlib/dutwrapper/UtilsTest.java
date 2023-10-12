@@ -2,7 +2,6 @@ package io.dutwrapperlib.dutwrapper;
 
 import org.junit.jupiter.api.Test;
 
-import io.dutwrapperlib.dutwrapper.Utils;
 import io.dutwrapperlib.dutwrapper.objects.dutschoolyear.DUTSchoolYear;
 import io.dutwrapperlib.dutwrapper.objects.dutschoolyear.DUTSchoolYearItem;
 

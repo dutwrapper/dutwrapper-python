@@ -20,19 +20,16 @@ dependencies {
     api 'org.apache.commons:commons-math3:3.6.1'
 
     // This dependency is used internally, and not exposed to consumers on their own compile classpath.
-    implementation 'com.google.guava:guava:31.1-jre'
+    implementation 'com.google.guava:guava:32.1.2-jre'
 
-    // JSoup
-    implementation 'org.jsoup:jsoup:1.15.3'
+    // JSoup - https://mvnrepository.com/artifact/org.jsoup/jsoup
+    implementation 'org.jsoup:jsoup:1.16.1'
 
-    // OkHttp3 (https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp)
-    implementation 'com.squareup.okhttp3:okhttp:4.10.0'
+    // OkHttp3 - https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp
+    implementation 'com.squareup.okhttp3:okhttp:5.0.0-alpha.11'
 
-    // OkHttp (https://mvnrepository.com/artifact/com.squareup.okhttp/okhttp)
-    implementation 'com.squareup.okhttp:okhttp:2.7.5'
-
-    // Google Gson
-    implementation 'com.google.code.gson:gson:2.9.1'
+    // Google Gson - https://mvnrepository.com/artifact/com.google.code.gson/gson
+    implementation 'com.google.code.gson:gson:2.10.1'
 }
 
 test {
@@ -44,4 +41,9 @@ tasks.named('compileJava') {
     // use the project's version or define one directly
     options.encoding = 'UTF-8'
     options.javaModuleVersion = provider { project.version }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }

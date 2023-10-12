@@ -1,12 +1,11 @@
 package io.dutwrapperlib.dutwrapper.objects.news;
 
-import java.io.Serializable;
 import java.util.ArrayList;
 
 import io.dutwrapperlib.dutwrapper.objects.accounts.LessonItem;
 import io.dutwrapperlib.dutwrapper.objects.enums.LessonStatus;
 
-public class NewsSubjectItem extends NewsGlobalItem implements Serializable {
+public class NewsSubjectItem extends NewsGlobalItem {
     private ArrayList<NewsSubjectAffectedItem> affectedClass = new ArrayList<>();
     private Long affectedDate = 0L;
     private LessonStatus lessonStatus = LessonStatus.Unknown;

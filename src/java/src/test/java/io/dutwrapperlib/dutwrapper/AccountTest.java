@@ -2,7 +2,6 @@ package io.dutwrapperlib.dutwrapper;
 
 import org.junit.jupiter.api.Test;
 
-import io.dutwrapperlib.dutwrapper.Account;
 import io.dutwrapperlib.dutwrapper.customrequest.CustomResponse;
 import io.dutwrapperlib.dutwrapper.objects.accounts.AccountInformation;
 import io.dutwrapperlib.dutwrapper.objects.accounts.SubjectFeeItem;
