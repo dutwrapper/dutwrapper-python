@@ -5,16 +5,20 @@ import unittest
 import os
 
 def Test_NewsGlobal():
+    print()
     MAX_NEWS = 5
     for i in range(1, MAX_NEWS + 1, 1):
         data = dutwrapper.GetNews(NewsType.Global, i)
+        print(data)
         print("News Global in page {page}: {count}".format(page=i, count=len(data['news_list'])))
     pass
 
 def Test_NewsSubject():
+    print()
     MAX_NEWS = 5
     for i in range(1, MAX_NEWS + 1, 1):
         data = dutwrapper.GetNews(NewsType.Subjects, i)
+        print(data)
         print("News Subject in page {page}: {count}".format(page=i, count=len(data['news_list'])))
     pass
 
@@ -39,10 +43,10 @@ def Test_Account():
 
     Session.Login(sessionID=sId, username=username, password=password)
     print(Session.IsLoggedIn(sessionID=sId))
-    Session.GetSubjectSchedule(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer)
-    Session.GetSubjectFee(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer)
-    Session.GetAccountInformation(sessionID=sId)
-    Session.Logout(sessionID=sId)
+    print(Session.GetSubjectSchedule(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
+    print(Session.GetSubjectFee(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
+    print(Session.GetAccountInformation(sessionID=sId))
+    print(Session.Logout(sessionID=sId))
     print(Session.IsLoggedIn(sessionID=sId))
     pass
 
