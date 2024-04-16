@@ -1,6 +1,10 @@
-# DUT WRAPPER CHANGE LOG - PYTHON
+# DUTWRAPPER CHANGE LOG - PYTHON
 
 This file will list all version log for modified, add or remove function of DutWrapper.
+
+## 1.7.1
+- Fixed a issue prevent logging in to sv.dut.udn.vn.
+- Improvement test.
 
 ## 1.7.0
 - Renamed package to dutwrapper.
