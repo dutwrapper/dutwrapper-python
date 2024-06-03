@@ -1,5 +1,5 @@
 import dutwrapper
-import dutwrapper.Session as Session
+import dutwrapper.Account as Account
 from dutwrapper.Enums import NewsType
 import unittest
 import os
@@ -8,7 +8,7 @@ def Test_NewsGlobal():
     print()
     MAX_NEWS = 5
     for i in range(1, MAX_NEWS + 1, 1):
-        data = dutwrapper.GetNews(NewsType.Global, i)
+        data = dutwrapper.get_news(NewsType.Global, i)
         print(data)
         print("News Global in page {page}: {count}".format(page=i, count=len(data['news_list'])))
     pass
@@ -17,37 +17,55 @@ def Test_NewsSubject():
     print()
     MAX_NEWS = 5
     for i in range(1, MAX_NEWS + 1, 1):
-        data = dutwrapper.GetNews(NewsType.Subjects, i)
+        data = dutwrapper.get_news(NewsType.Subjects, i)
         print(data)
         print("News Subject in page {page}: {count}".format(page=i, count=len(data['news_list'])))
     pass
 
 def Test_Account():
-    year = 22
-    semester = 1
+    year = 20
+    semester = 2
     study_at_summer = False
 
-    data = os.getenv('dut_account')
-    if (data == None):
-        print("Warning: No username/password found in environment variable. This test will be ignored...")
-        data = ""
-        return
+    if (os.getenv('dut_account') == None):
+        raise Exception("[Error] No dut_account environment variable found! This test will be ignored...")
+    username = os.getenv('dut_account').split('|')[0]
+    password = os.getenv('dut_account').split('|')[1]
 
-    username = data.split('|')[0]
-    password = data.split('|')[1]
-    sId = Session.GenerateSessionID()
+    if (os.getenv('school_year') == None):
+        raise Exception("[Error] No school_year environment variable found. This test will be ignored...")        
+    year = os.getenv('school_year').split('|')[0]
+    semester = os.getenv('school_year').split('|')[1]
+    study_at_summer = True if (os.getenv('school_year').split('|')[2] == 1) else False
+
+    sId = Account.generate_session_id()
     if (sId == None):
-        print("Warning: Invalid username/password. This test will be ignored...")
-        sId = ""
-        return
+        raise Exception("[Error] Can't get new Session ID. Try again later. This test will be ignored...")
 
-    Session.Login(sessionID=sId, username=username, password=password)
-    print(Session.IsLoggedIn(sessionID=sId))
-    print(Session.GetSubjectSchedule(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
-    print(Session.GetSubjectFee(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
-    print(Session.GetAccountInformation(sessionID=sId))
-    print(Session.Logout(sessionID=sId))
-    print(Session.IsLoggedIn(sessionID=sId))
+    print('[Test] Login')
+    print(Account.login(sessionID=sId, username=username, password=password))
+    print()
+    print('[Test] Check if logged in')
+    print(Account.is_logged_in(sessionID=sId))
+    print()
+    print('[Test] Get subject schedule')
+    print(Account.fetch_subject_schedule(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
+    print()
+    print('[Test] Get subject fee')
+    print(Account.fetch_subject_fee(sessionID=sId, year=year, semester=semester, studyAtSummer=study_at_summer))
+    print()
+    print('[Test] Get account information')
+    print(Account.fetch_account_information(sessionID=sId))
+    print()
+    print('[Test] Get account training status')
+    print(Account.fetch_account_training_status(sessionID=sId))
+    print()
+    print('[Test] Logout')
+    print(Account.logout(sessionID=sId))
+    print()
+    print('[Test] Check if this session has logged out')
+    print(Account.is_logged_in(sessionID=sId))
+    print()
     pass
 
 class TestEntirePackage(unittest.TestCase):

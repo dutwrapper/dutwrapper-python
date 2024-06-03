@@ -1,6 +1,6 @@
 
 from dutwrapper.Utils import *
 from dutwrapper.Enums import *
-from dutwrapper.Session import *
-from dutwrapper.GetNews import *
+from dutwrapper.Account import *
+from dutwrapper.News import *
 
