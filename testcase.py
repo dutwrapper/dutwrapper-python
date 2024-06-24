@@ -6,20 +6,20 @@ import os
 
 def Test_NewsGlobal():
     print()
-    MAX_NEWS = 5
+    MAX_NEWS = 1
     for i in range(1, MAX_NEWS + 1, 1):
         data = dutwrapper.get_news(NewsType.Global, i)
         print(data)
-        print("News Global in page {page}: {count}".format(page=i, count=len(data['news_list'])))
+        print("News Global in page {page}: {count}".format(page=i, count=len(data)))
     pass
 
 def Test_NewsSubject():
     print()
-    MAX_NEWS = 5
+    MAX_NEWS = 1
     for i in range(1, MAX_NEWS + 1, 1):
         data = dutwrapper.get_news(NewsType.Subjects, i)
         print(data)
-        print("News Subject in page {page}: {count}".format(page=i, count=len(data['news_list'])))
+        print("News Subject in page {page}: {count}".format(page=i, count=len(data)))
     pass
 
 def Test_Account():

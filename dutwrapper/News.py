@@ -51,10 +51,7 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
         return result
 
     # Prepare a result data    
-    jsonReturn = {}
-    jsonReturn['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    jsonReturn['news_type'] = type.value
-    jsonReturn['news_list'] = []
+    jsonReturn = []
     if (page < 1):
         page = 1
     try:
@@ -77,16 +74,18 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
             # Get news content
             content = news[i].find('div', class_='tbBoxContent')
             # Add to jsonReturn
-            jsonReturn['news_list'].append({
+            jsonReturn.append({
                 'date': date,
                 'title': title,
-                'content': content.text,
+                'content': content.encode_contents().decode('utf-8'),
+                'content_string': content.text,
                 'links': __getLinks__(content)
             })
     except Exception as ex:
         # If something went wrong, delete all items in news list.
         print(ex)
-        jsonReturn['news_list'].clear()
+        jsonReturn.clear()
+        jsonReturn = []
     finally:
         # Return result
         return jsonReturn
