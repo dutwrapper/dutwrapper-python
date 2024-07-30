@@ -1,12 +1,16 @@
 
 from bs4 import BeautifulSoup, ResultSet
 from datetime import datetime
+import enum
 import requests
 
 # Import configured variables
-from dutwrapper.__Variables__ import *
-from dutwrapper.Enums import *
+import dutwrapper.__Variables__ as Variables
 from dutwrapper.Utils import *
+
+class NewsType(enum.Enum):
+    Global = 'Global'
+    Subjects = 'Subjects'
 
 # Get news from sv.dut.udn.vn with page you selected.
 def get_news(type: NewsType = NewsType.Global, page: int = 1):
@@ -28,6 +32,8 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
             if index >= len(lst):
                 raise Exception()
         except Exception as ex:
+            if (Variables.DEBUG_LOG):
+                print(ex)
             index = -1
         return index
     
@@ -42,7 +48,8 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
             if (index > -1):
                 item = {}
                 item['text'] = linkResultSet[index].text
-                item['url'] = linkResultSet[index].attrs['href'] if 'href' in linkResultSet[index].attrs.keys() else None
+                item['content'] = linkResultSet[index].attrs['href'] if 'href' in linkResultSet[index].attrs.keys() else None
+                item['type'] = 'link'
                 item['position'] = textLength
                 result.append(item)
                 linkResultSet.pop(index)
@@ -57,9 +64,9 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
     try:
         # Get elements from sv.dut.dut.vn
         if (type == NewsType.Global):
-            webHTML = requests.get(URL_NEWSGENERAL.format(page = page))
+            webHTML = requests.get(Variables.URL_NEWSGENERAL.format(page = page))
         else:
-            webHTML = requests.get(URL_NEWSSUBJECTS.format(page = page))
+            webHTML = requests.get(Variables.URL_NEWSSUBJECTS.format(page = page))
         # Convert to BeautifulSoup
         soup = BeautifulSoup(webHTML.content, 'lxml')
         # Find all element groups in html.
@@ -77,13 +84,14 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
             jsonReturn.append({
                 'date': date,
                 'title': title,
-                'content': content.encode_contents().decode('utf-8'),
-                'content_string': content.text,
-                'links': __getLinks__(content)
+                'content_html': content.encode_contents().decode('utf-8'),
+                'content': content.text,
+                'resources': __getLinks__(content)
             })
     except Exception as ex:
         # If something went wrong, delete all items in news list.
-        print(ex)
+        if (Variables.DEBUG_LOG):
+            print(ex)
         jsonReturn.clear()
         jsonReturn = []
     finally:

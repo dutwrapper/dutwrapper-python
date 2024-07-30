@@ -8,6 +8,7 @@
 __pycache__/*
 */__pycache__/*
 .venv/*
+.env
 
 [Temporary files]
 main*.py

@@ -3,8 +3,7 @@ from bs4 import BeautifulSoup
 import time
 
 # Import configured variables
-from dutwrapper.__Variables__ import *
-from dutwrapper.Enums import *
+import dutwrapper.__Variables__ as Variables
 
 def GetRegionGMT():
     return round((-time.timezone) / 3600, 1)
@@ -24,16 +23,17 @@ class BeautifulSoupUtils(object):
         tempHtml = soup.find(tag, {'id': id})
         try:
             if (tag == 'input'):
-                return tempHtml['value'] # type: ignore
+                return tempHtml['value']
             elif (tag == 'select'):
-                for tempOption in tempHtml.find_all('option', {'selected': 'selected'}): # type: ignore
+                for tempOption in tempHtml.find_all('option', {'selected': 'selected'}):
                     return tempOption.text
             elif (tag == 'textarea'):
                 return tempHtml.text
             else:
                 raise Exception('Undefined')
         except Exception as ex:
-            print('Can\'t get {id}: {err}'.format(id=id, err=ex))
+            if (Variables.DEBUG_LOG):
+                print('Can\'t get {id}: {err}'.format(id=id, err=ex))
             return None
         
     @classmethod
@@ -44,5 +44,9 @@ class BeautifulSoupUtils(object):
                 return True
             return False
         except Exception as ex:
-            print('Can\'t get {id}: {err}'.format(id=id, err=ex))
+            if (Variables.DEBUG_LOG):
+                print('Can\'t get {id}: {err}'.format(id=id, err=ex))
             return None
+
+def set_debug_log(enabled: bool):
+    Variables.DEBUG_LOG = enabled

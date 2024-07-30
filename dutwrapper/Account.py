@@ -4,71 +4,116 @@ from datetime import datetime, timedelta
 import requests
 from requests.structures import CaseInsensitiveDict
 	
-# Import configured variables
-from dutwrapper.__Variables__ import *
-from dutwrapper.Enums import *
+import dutwrapper.__Variables__ as Variables
 from dutwrapper.Utils import *
 
-def generate_session_id():
+class Session:
+    def __init__(self, session_id: str = None, view_state: str = None, view_state_generator: str = None):
+        self.session_id = session_id
+        self.view_state = view_state
+        self.view_state_generator = view_state_generator
+
+    def export_session_id_to_cookie(self) -> str:
+        return "ASP.NET_SessionId={id};".format(id=self.session_id)
+    
+    def ensure_logged_in(self):
+        self.ensure_valid_session_id()
+        if (is_logged_in(session=self) != 0):
+            raise Exception('You are not logged in.')
+        return
+    
+    def ensure_valid_session_id(self):
+        if (self.session_id == None):
+            raise Exception('SessionID not found!')
+        return
+    
+    def ensure_valid_login_form(self):
+        self.ensure_valid_session_id()
+        if (self.view_state == None):
+            raise Exception('ViewState not found! This is required when login.')
+        if (self.view_state_generator == None):
+            raise Exception('ViewStateGenerator not found! This is required when login.')
+        return
+    
+def generate_new_session() -> Session:
     WEB_SESSION = requests.Session()
-    response = WEB_SESSION.get('http://sv.dut.udn.vn')
+    response = WEB_SESSION.get(Variables.URL_ACCOUNTLOGIN)
     if (response.status_code in [200, 204]):
+        session = Session(None, None, None)
+        # Get Session ID
         temp = WEB_SESSION.cookies.get_dict()
         if ('ASP.NET_SessionId' in temp.keys()):
-            return temp['ASP.NET_SessionId']
+            session.session_id = temp['ASP.NET_SessionId']
+        # Get ViewState and ViewStateGenerator
+        soup = BeautifulSoup(response.content, 'lxml')
+        session.view_state = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATE')
+        session.view_state_generator = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATEGENERATOR')
+        return session
+    else:
+        return Session(None, None, None)
 
-def is_logged_in(sessionID: str):
+def is_logged_in(session: Session) -> int:
     """
     Check if your account is logged in from sv.dut.udn.vn.
-    """
-    # Prepare a result data.
-    result = {}
-    result['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    result['session_id'] = sessionID
-    result['logged_in'] = False
-    try:
-        # If session id is not exist, create one
-        headers = CaseInsensitiveDict()
-        headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=sessionID)
-        response = requests.get(URL_ACCOUNTCHECKLOGIN, headers=headers) 
-        if (response.status_code in [200, 204]):
-            result['logged_in'] = True
-    except:
-        # If something went wrong, 'loggedin' will False.
-        result['logged_in'] = False
-    finally:
-        # Return result
-        return result
 
-def login(sessionID: str, username: str, password: str):
+    Returns:
+    - 0: `Logged in`
+    - 1: `Not logged in - Logged out`
+    """
+    session.ensure_valid_session_id()
+    
+    try:
+        headers = CaseInsensitiveDict()
+        # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+        headers["Cookie"] = session.export_session_id_to_cookie()
+        response = requests.get(Variables.URL_ACCOUNTCHECKLOGIN, headers=headers) 
+        # If returned code 2xx, return LoggedIn (0)
+        if (response.status_code in [200, 204]):
+            return 0
+        # TODO: We need to seperate login status here, but we don't have any document about this. So, just return NotLoggedIn (1)
+        else:
+            return 1
+    except Exception as ex:
+        # If something went wrong, return anything to NotLoggedIn (1)
+        if (Variables.DEBUG_LOG):
+            print(ex)
+        return 1
+
+def login(session: Session, username: str, password: str):
     """
     Login to sv.dut.udn.vn using your account provided by DUT school.
+    session (Dict): Session you got from `generate_session()`
     username (string): Username (i.e. Student ID).
     password (string): Password
     """
+    session.ensure_valid_login_form()
+
     # 
     dataRequest = {}
-    dataRequest['__VIEWSTATE'] = VIEWSTATE
-    dataRequest['__VIEWSTATEGENERATOR'] = '20CC0D2F'
+    dataRequest['__VIEWSTATE'] = session.view_state
+    dataRequest['__VIEWSTATEGENERATOR'] = session.view_state_generator
     dataRequest['_ctl0:MainContent:DN_txtAcc'] = username
     dataRequest['_ctl0:MainContent:DN_txtPass'] = password
     dataRequest['_ctl0:MainContent:QLTH_btnLogin'] = 'Đăng+nhập'
     # print(self.SessionID)
     headers = CaseInsensitiveDict()
-    headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=sessionID)
-    requests.post(URL_ACCOUNTLOGIN, data=dataRequest, headers=headers)
+    # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+    headers["Cookie"] = session.export_session_id_to_cookie()
+    requests.post(Variables.URL_ACCOUNTLOGIN, data=dataRequest, headers=headers)
     #
-    return is_logged_in(sessionID)
+    return
 
-def logout(sessionID: str):
+def logout(session: Session):
     """
     Logout your account from sv.dut.udn.vn.
     """
+    session.ensure_valid_session_id()
+
     headers = CaseInsensitiveDict()
-    headers['Cookie'] = "ASP.NET_SessionId={id}".format(id=sessionID)
-    requests.get(URL_ACCOUNTLOGOUT, headers=headers)
-    #
-    return is_logged_in(sessionID)
+    # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+    headers["Cookie"] = session.export_session_id_to_cookie()
+    requests.get(Variables.URL_ACCOUNTLOGOUT, headers=headers)
+    return
 
 def __string2ExamSchedule__(src: str):
     # If string is empty, return {}
@@ -108,27 +153,21 @@ def __string2ExamSchedule__(src: str):
     result['examRoom'] = room
     return result
 
-def fetch_subject_schedule(sessionID: str, year: int = 20, semester: int = 1, studyAtSummer: bool = False):
+def fetch_subject_information(session: Session, year: int = 20, semester: int = 1, studyAtSummer: bool = False):
     """
     Get all subject schedule (study and examination) from a year you choosed.
     year (int): 2-digit year.
     semester (int): 1 or 2
     studyAtSummer (bool): Show schedule if you has studied in summer. 'semester' must be 2, otherwise will getting exception.
     """
-    result = {}
-    result['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    result['total_credit'] = 0.0
-    result['schedule_list'] = []
+    session.ensure_logged_in()
+
+    result = []
     try:
-        if (is_logged_in(sessionID)['logged_in'] == False):
-            raise Exception('You are not logged in.')
-        if studyAtSummer:
-            satS = 1
-        else:
-            satS = 0
-        url = URL_ACCOUNTSCHEDULE.format(nam = year, hocky = semester, hoche = satS)
+        url = Variables.URL_ACCOUNTSCHEDULE.format(nam = year, hocky = semester, hoche = 1 if studyAtSummer else 0)
         headers = CaseInsensitiveDict()
-        headers['Cookie'] = "ASP.NET_SessionId={id}".format(id=sessionID)
+        # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+        headers["Cookie"] = session.export_session_id_to_cookie()
         webHTML = requests.get(url, headers=headers)
         soup = BeautifulSoup(webHTML.content, 'lxml')  # type: ignore
         # Find all subjects schedule
@@ -152,35 +191,33 @@ def fetch_subject_schedule(sessionID: str, year: int = 20, semester: int = 1, st
             resultRow['schedule_study'] = {}
             # Schedule study
             if (cell[7].text != None and len(cell[7].text) > 0):
-                resultRow['schedule_study']['schedule'] = []
+                resultRow['schedule_study']['schedule_list'] = []
                 cellSplit = cell[7].text.split('; ') if ('; ' in cell[7].text) else [cell[7].text]
                 for cellSplitItem in cellSplit:
                     item = {}
                     item['day_of_week'] = 0 if ('CN' in cellSplitItem.upper()) else (int(cellSplitItem.split(',')[0].split(' ')[1]) - 1)
-                    item['lesson'] = {}
-                    item['lesson']['start'] = cellSplitItem.split(',')[1].split('-')[0]
-                    item['lesson']['end'] = cellSplitItem.split(',')[1].split('-')[1]
+                    item['lesson_affected'] = {}
+                    item['lesson_affected']['start'] = cellSplitItem.split(',')[1].split('-')[0]
+                    item['lesson_affected']['end'] = cellSplitItem.split(',')[1].split('-')[1]
                     item['room'] = cellSplitItem.split(',')[2]
-                    resultRow['schedule_study']['schedule'].append(item)
+                    resultRow['schedule_study']['schedule_list'].append(item)
             else:
-                resultRow['schedule_study']['schedule'] = None
+                resultRow['schedule_study']['schedule_list'] = []
             # Weeks
             if (cell[8].text != None and len(cell[8].text) > 0):
-                resultRow['schedule_study']['weeks'] = []
+                resultRow['schedule_study']['week_affected'] = []
                 cellSplit = cell[8].text.split(';') if (';' in cell[8].text) else [cell[8].text]
                 for cellSplitItem in cellSplit:
                     item = {}
                     item['start'] = cellSplitItem.split('-')[0]
                     item['end'] = cellSplitItem.split('-')[1]
-                    resultRow['schedule_study']['weeks'].append(item)
+                    resultRow['schedule_study']['week_affected'].append(item)
             else:
-                resultRow['schedule_study']['weeks'] = None
+                resultRow['schedule_study']['week_affected'] = []
             # Point formula
             resultRow['point_formula'] = cell[10].text
-            # Plus credit to total
-            result['total_credit'] += resultRow['credit']
             # Append to schedule list
-            result['schedule_list'].append(resultRow)
+            result.append(resultRow)
         
         # Find all subjects schedule examination
         schExamTable = soup.find('table', {'id': 'TTKB_GridLT'})
@@ -188,38 +225,35 @@ def fetch_subject_schedule(sessionID: str, year: int = 20, semester: int = 1, st
 
         for i in range(0, len(schExamRow), 1):
             cell = schExamRow[i].find_all('td', {'class':'GridCell'})
-            for j in range(0, len(result['schedule_list']), 1):
-                if (result['schedule_list'][j]['id'] == cell[1].text):
-                    result['schedule_list'][j]['schedule_exam'] = {}
-                    result['schedule_list'][j]['schedule_exam']['group'] = cell[3].text
-                    result['schedule_list'][j]['schedule_exam']['is_global'] = True if ('GridCheck' in cell[4].attrs.get('class')) else False
-                    result['schedule_list'][j]['schedule_exam']['date'] = __string2ExamSchedule__(cell[5].text)['examDate']
-                    result['schedule_list'][j]['schedule_exam']['room'] = __string2ExamSchedule__(cell[5].text)['examRoom']
+            for j in range(0, len(result), 1):
+                if (result[j]['id'] == cell[1].text):
+                    result[j]['schedule_exam'] = {}
+                    result[j]['schedule_exam']['group'] = cell[3].text
+                    result[j]['schedule_exam']['is_global'] = True if ('GridCheck' in cell[4].attrs.get('class')) else False
+                    result[j]['schedule_exam']['date'] = __string2ExamSchedule__(cell[5].text)['examDate']
+                    result[j]['schedule_exam']['room'] = __string2ExamSchedule__(cell[5].text)['examRoom']
     except Exception as ex:
-        result['total_credit'] = 0.0
-        result['schedule_list'].clear()
-        print(ex)
+        if (Variables.DEBUG_LOG):
+            print(ex)
+        result.clear()
     finally:
         return result
 
-def fetch_subject_fee(sessionID: str, year: int = 20, semester: int = 1, studyAtSummer: bool = False):
+def fetch_subject_fee(session: Session, year: int = 20, semester: int = 1, studyAtSummer: bool = False):
     """
     Get all subject fee from a year you choosed.
     year (int): 2-digit year.
     semester (int): 1 or 2
     studyAtSummer (bool): Show schedule if you has studied in summer. 'semester' must be 2, otherwise will getting exception.
     """
-    result = {}
-    result['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    result['total_credit'] = 0
-    result['total_money'] = 0
-    result['fee_list'] = []
+    session.ensure_logged_in()
+    
+    result = []
     try:
-        if (is_logged_in(sessionID)['logged_in'] == False):
-            raise Exception('You are not logged in.')
         headers = CaseInsensitiveDict()
-        headers['Cookie'] = "ASP.NET_SessionId={id}".format(id=sessionID)
-        webHTML = requests.get(URL_ACCOUNTFEE.format(nam = year, hocky = semester, hoche = 1 if (studyAtSummer) else 0), headers=headers)
+        # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+        headers["Cookie"] = session.export_session_id_to_cookie()
+        webHTML = requests.get(Variables.URL_ACCOUNTFEE.format(nam = year, hocky = semester, hoche = 1 if (studyAtSummer) else 0), headers=headers)
         soup = BeautifulSoup(webHTML.content, 'lxml')
         # Find all subjects fees
         feeTable = soup.find('table', {'id': 'THocPhi_GridInfo'})
@@ -232,17 +266,14 @@ def fetch_subject_fee(sessionID: str, year: int = 20, semester: int = 1, studyAt
             item['credit'] = float(cell[3].text)  # type: ignore
             item['is_high_quality'] = True if ('GridCheck' in cell[4].attrs.get('class')) else False
             item['price'] = 0 if (cell[5].text == None or len(cell[5].text) == 0) else float(cell[5].text.replace(',', ''))
-            item['debt'] = True if ('GridCheck' in cell[6].attrs.get('class')) else False
+            item['is_debt'] = True if ('GridCheck' in cell[6].attrs.get('class')) else False
             item['is_restudy'] = True if ('GridCheck' in cell[7].attrs.get('class')) else False
             item['verified_payment_at'] = cell[8].text
-            result['total_credit'] += item['credit']
-            result['total_money'] += item['price']
-            result['fee_list'].append(item)
+            result.append(item)
     except Exception as ex:
-        result['total_credit'] = 0
-        result['total_money'] = 0
-        result['fee_list'] = []
-        print(ex)
+        if (Variables.DEBUG_LOG):
+            print(ex)
+        result = []
     finally:
         return result
 
@@ -250,50 +281,51 @@ def __getStudentID__(soup: BeautifulSoup):
     baseTxt = soup.find('span', {'id': 'Main_lblHoTen'}).text
     return baseTxt[baseTxt.index('(') + 1:baseTxt.index(')')]
 
-def fetch_account_information(sessionID: str):
+def fetch_student_information(session: Session):
+    session.ensure_logged_in()
+
     result = {}
-    result['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    result['account_info'] = {}
     try:
-        if (is_logged_in(sessionID)['logged_in'] == False):
-            raise Exception('You are not logged in.')
         headers = CaseInsensitiveDict()
-        headers['Cookie'] = "ASP.NET_SessionId={id}".format(id=sessionID)
-        webHTML = requests.get(URL_ACCOUNTINFORMATION, headers=headers)
+        # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+        headers["Cookie"] = session.export_session_id_to_cookie()
+        webHTML = requests.get(Variables.URL_ACCOUNTINFORMATION, headers=headers)
+
         soup = BeautifulSoup(webHTML.content, 'lxml')
-        result['account_info']['name'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHoTen')
-        result['account_info']['dateOfBirth'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgaySinh')
-        result['account_info']['birthPlace'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiSinh')
-        result['account_info']['gender'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtGioiTinh')
-        result['account_info']['ethnicity'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDanToc')
-        result['account_info']['nationality'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuocTich')
-        result['account_info']['nationalIdCard'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCMND')
-        result['account_info']['nationalIdCardIssueDate'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgayCap')
-        result['account_info']['nationalIdCardIssuePlace'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiCap')
-        result['account_info']['citizenIdCard'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCCCD')
-        result['account_info']['citizenIdCardIssueDate'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNcCCCD')
-        result['account_info']['religion'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTonGiao')
-        result['account_info']['accountBankId'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtTKNHang')
-        result['account_info']['accountBankName'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgHang')
-        result['account_info']['hIId'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoBHYT')
-        result['account_info']['hIExpireDate'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHanBHYT')
-        result['account_info']['specialization'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtNganh')
-        result['account_info']['schoolClass'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtLop')
-        result['account_info']['trainingProgramPlan'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCTDT')
-        result['account_info']['trainingProgramPlan2'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCT2')
-        result['account_info']['schoolEmail'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail1')
-        result['account_info']['personalEmail'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail2')
-        result['account_info']['schoolEmailInitPass'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMK365')
-        result['account_info']['facebookUrl'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtFace')
-        result['account_info']['phoneNumber'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtPhone')
-        result['account_info']['address'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtCuTru')
-        result['account_info']['addressFrom'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDCCua')
-        result['account_info']['addressCity'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTinhCTru')
-        result['account_info']['addressDistrict'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuanCTru')
-        result['account_info']['addressSubDistrict'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboPhuongCTru')
-        result['account_info']['studentId'] = __getStudentID__(soup)
+        result['name'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHoTen')
+        result['date_of_birth'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgaySinh')
+        result['birth_pace'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiSinh')
+        result['gender'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtGioiTinh')
+        result['ethnicity'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDanToc')
+        result['nationality'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuocTich')
+        result['national_id_card'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCMND')
+        result['national_id_card_issue_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgayCap')
+        result['national_id_card_issue_place'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiCap')
+        result['citizen_id_card'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCCCD')
+        result['citizen_id_card_issue_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNcCCCD')
+        result['religion'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTonGiao')
+        result['account_bank_id'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtTKNHang')
+        result['account_bank_name'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgHang')
+        result['hi_id'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoBHYT')
+        result['hi_expire_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHanBHYT')
+        result['specialization'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtNganh')
+        result['school_class'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtLop')
+        result['training_program_plan'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCTDT')
+        result['training_program_plan_2'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCT2')
+        result['school_email'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail1')
+        result['personal_email'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail2')
+        result['school_email_init_pass'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMK365')
+        result['facebook_url'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtFace')
+        result['phone_number'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtPhone')
+        result['address'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtCuTru')
+        result['address_from'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDCCua')
+        result['address_city'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTinhCTru')
+        result['address_district'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuanCTru')
+        result['address_sub_district'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboPhuongCTru')
+        result['student_id'] = __getStudentID__(soup)
     except Exception as ex:
-        print(ex)
+        if (Variables.DEBUG_LOG):
+            print(ex)
     finally:
         return result
 
@@ -322,19 +354,24 @@ def __fetch_training_status_summary__(soup: BeautifulSoup):
                 t1Result['avg_social'] = int(cell[cell_len - 1].text.strip())
         result = t1Result  
     except Exception as ex:
+        if (Variables.DEBUG_LOG):
+            print(ex)
         result = {}
-        print(ex)
     finally:
         return result
     
 def __fetch_training_status_graduate__(soup: BeautifulSoup):
     result = {}
     try:
-        result['gdtc_certificate'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkGDTC')
-        result['rewards'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKT')
-        result['discipline'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKL')
-        result['graduate_thesis_status_result'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtInfo')
-        result['graduate_status_result'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtCNTN')
+        result['has_sig_physical_education'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkGDTC')
+        result['has_sig_national_defense_education'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkQP')
+        result['has_sig_english'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCNN')
+        result['has_sig_it'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCTH')
+        result['has_qualified_graduate'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCNTN')
+        result['rewards_info'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKT')
+        result['discipline_info'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKL')
+        result['eligible_graduation_thesis_status'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtInfo')
+        result['eligible_graduation_status'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtCNTN')
     except Exception as ex:
         result = {}
         print(ex)
@@ -351,52 +388,54 @@ def __fetch_training_status_subject_result__(soup: BeautifulSoup):
             cell = t1Row[i].find_all('td', {'class': 'GridCell'})
             cellData['index'] = int(cell[0].text)
             cellData['school_year'] = cell[1].text
-            cellData['is_subject_in_summer'] = True if ('GridCheck' in cell[2].attrs.get('class')) else False
-            cellData['subject_id'] = cell[3].text
-            cellData['subject_name'] = cell[4].text
+            cellData['is_extended_summer'] = True if ('GridCheck' in cell[2].attrs.get('class')) else False
+            cellData['id'] = cell[3].text
+            cellData['name'] = cell[4].text
             cellData['credit'] = int(cell[5].text)
             cellData['point_formula'] = cell[6].text
-            cellData['bt'] = float(cell[7].text) if (StringUtils.is_null_or_empty(cell[7].text)) else None
-            cellData['bv'] = float(cell[8].text) if (StringUtils.is_null_or_empty(cell[8].text)) else None
-            cellData['cc'] = float(cell[9].text) if (StringUtils.is_null_or_empty(cell[9].text)) else None
-            cellData['ck'] = float(cell[10].text) if (StringUtils.is_null_or_empty(cell[10].text)) else None
-            cellData['gk'] = float(cell[11].text) if (StringUtils.is_null_or_empty(cell[11].text)) else None
-            cellData['qt'] = float(cell[12].text) if (StringUtils.is_null_or_empty(cell[12].text)) else None
-            cellData['th'] = float(cell[13].text) if (StringUtils.is_null_or_empty(cell[13].text)) else None
-            cellData['tt'] = float(cell[14].text) if (StringUtils.is_null_or_empty(cell[14].text)) else None
-            cellData['score_t10'] = float(cell[15].text) if (StringUtils.is_null_or_empty(cell[15].text)) else None
-            cellData['score_t4'] = float(cell[16].text) if (StringUtils.is_null_or_empty(cell[16].text)) else None
-            cellData['score_char'] = cell[17].text
+            cellData['point_bt'] = float(cell[7].text) if (StringUtils.is_null_or_empty(cell[7].text)) else None
+            cellData['point_bv'] = float(cell[8].text) if (StringUtils.is_null_or_empty(cell[8].text)) else None
+            cellData['point_cc'] = float(cell[9].text) if (StringUtils.is_null_or_empty(cell[9].text)) else None
+            cellData['point_ck'] = float(cell[10].text) if (StringUtils.is_null_or_empty(cell[10].text)) else None
+            cellData['point_gk'] = float(cell[11].text) if (StringUtils.is_null_or_empty(cell[11].text)) else None
+            cellData['point_qt'] = float(cell[12].text) if (StringUtils.is_null_or_empty(cell[12].text)) else None
+            cellData['point_th'] = float(cell[13].text) if (StringUtils.is_null_or_empty(cell[13].text)) else None
+            cellData['point_tt'] = float(cell[14].text) if (StringUtils.is_null_or_empty(cell[14].text)) else None
+            cellData['result_t10'] = float(cell[15].text) if (StringUtils.is_null_or_empty(cell[15].text)) else None
+            cellData['result_t4'] = float(cell[16].text) if (StringUtils.is_null_or_empty(cell[16].text)) else None
+            cellData['result_by_char'] = cell[17].text
             result.append(cellData)
     except Exception as ex:
+        if (Variables.DEBUG_LOG):
+            print(ex)
         result = []
-        print(ex)
     finally:
         return result
     
 
-def fetch_account_training_status(sessionID: str):
+def fetch_training_result(session: Session):
+    session.ensure_logged_in()
+
     result = {}
-    result['date'] = round(datetime.timestamp(datetime.now()) * 1000, 0)
-    result['training_status'] = {}
+    result['training_summary'] = {}
     result['graduate_status'] = {}
     result['subject_result'] = []
     
     try:
-        if (is_logged_in(sessionID)['logged_in'] == False):
-            raise Exception('You are not logged in.')
         headers = CaseInsensitiveDict()
-        headers['Cookie'] = "ASP.NET_SessionId={id}".format(id=sessionID)
-        webHTML = requests.get(URL_ACCOUNTTRAININGSTATUS, headers=headers)
+        # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
+        headers["Cookie"] = session.export_session_id_to_cookie()
+        webHTML = requests.get(Variables.URL_ACCOUNTTRAININGSTATUS, headers=headers)
         soup = BeautifulSoup(webHTML.content, 'lxml')
         
-        result['training_status'] = __fetch_training_status_summary__(soup)
+        result['training_summary'] = __fetch_training_status_summary__(soup)
         result['graduate_status'] = __fetch_training_status_graduate__(soup)
         result['subject_result'] = __fetch_training_status_subject_result__(soup)
     except Exception as ex:
-        result['training_status'] = {}
+        if (Variables.DEBUG_LOG):
+            print(ex)
+        result['training_summary'] = {}
         result['graduate_status'] = {}
         result['subject_result'] = []
-        print(ex)
     finally:
         return result
