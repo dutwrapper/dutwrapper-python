@@ -1,10 +1,17 @@
-# DUTWRAPPER CHANGE LOG - PYTHON
+# DUTWRAPPER CHANGE LOG
 
-This file will list all version log for modified, add or remove function of DutWrapper.
+This file will list all version log for modified, added or removed functions of dutwrapper (Python language).
+
+## 1.8.0
+- Added `fetch_account_training_status()` function in `Accounts`.
+- Adjust and resolved issues in all functions in `Accounts`.
+- Removed `GetCurrentWeek()` function in `Utils`. This will be back soon.
+- Sync all key in json with `dutwrapper-java` and `dutwrapper-dotnet`.
+- Improved unittest.
 
 ## 1.7.1
 - Fixed a issue prevent logging in to sv.dut.udn.vn.
-- Improvement test.
+- Improved unittest.
 
 ## 1.7.0
 - Renamed package to dutwrapper.

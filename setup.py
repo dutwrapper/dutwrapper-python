@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='dutwrapper',
-    version='1.7.1',
+    version='1.8.0',
     author='ZoeMeow',
     author_email='ZoeMeow1027@outlook.com',
     url='https://github.com/dutwrapper/dutwrapper-python',
