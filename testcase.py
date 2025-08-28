@@ -12,7 +12,7 @@ def pretty_print_dict(item: dict):
 
 def Test_NewsGlobal():
     print()
-    MAX_NEWS = 5
+    MAX_NEWS = 3
     for i in range(1, MAX_NEWS + 1, 1):
         data = News.get_news(NewsType.Global, i)
         pretty_print_dict(data)
@@ -21,11 +21,47 @@ def Test_NewsGlobal():
 
 def Test_NewsSubject():
     print()
-    MAX_NEWS = 5
+    MAX_NEWS = 3
     for i in range(1, MAX_NEWS + 1, 1):
-        data = News.get_news(NewsType.Subjects, i)
+        data = News.get_news(NewsType.Subject, i)
         pretty_print_dict(data)
         print("News Subject in page {page}: {count}".format(page=i, count=len(data)))
+    pass
+
+def Test_NewsStudentAffairs():
+    print()
+    MAX_NEWS = 3
+    for i in range(1, MAX_NEWS + 1, 1):
+        data = News.get_news(NewsType.StudentAffairs, i)
+        pretty_print_dict(data)
+        print("News Student affairs in page {page}: {count}".format(page=i, count=len(data)))
+    pass
+
+def Test_NewsExamination():
+    print()
+    MAX_NEWS = 3
+    for i in range(1, MAX_NEWS + 1, 1):
+        data = News.get_news(NewsType.Examination, i)
+        pretty_print_dict(data)
+        print("News Examination in page {page}: {count}".format(page=i, count=len(data)))
+    pass
+
+def Test_NewsTuitionFee():
+    print()
+    MAX_NEWS = 3
+    for i in range(1, MAX_NEWS + 1, 1):
+        data = News.get_news(NewsType.TuitionFee, i)
+        pretty_print_dict(data)
+        print("News Tuition Fee in page {page}: {count}".format(page=i, count=len(data)))
+    pass
+
+def Test_NewsStatuteRegulation():
+    print()
+    MAX_NEWS = 3
+    for i in range(1, MAX_NEWS + 1, 1):
+        data = News.get_news(NewsType.StatuteRegulation, i)
+        pretty_print_dict(data)
+        print("News Statute and Regulation in page {page}: {count}".format(page=i, count=len(data)))
     pass
 
 def Test_Account():
@@ -33,10 +69,10 @@ def Test_Account():
     semester = 2
     study_at_summer = False
 
-    if (os.getenv('dut_account') == None):
-        raise Exception("[Error] No dut_account environment variable found! This test will be ignored...")
-    username = os.getenv('dut_account').split('|')[0]
-    password = os.getenv('dut_account').split('|')[1]
+    if (os.getenv('DUT_ACCOUNT') == None):
+        raise Exception("[Error] No \'DUT_ACCOUNT\' environment variable found! This test will be ignored...")
+    username = os.getenv('DUT_ACCOUNT').split('|')[0]
+    password = os.getenv('DUT_ACCOUNT').split('|')[1]
 
     if (os.getenv('school_year') == None):
         raise Exception("[Error] No school_year environment variable found. This test will be ignored...")        
@@ -80,6 +116,10 @@ class TestEntirePackage(unittest.TestCase):
     def test_news(self):
         Test_NewsGlobal()
         Test_NewsSubject()
+        Test_NewsStudentAffairs()
+        Test_NewsExamination()
+        Test_NewsTuitionFee()
+        Test_NewsStatuteRegulation()
         pass
 
     def test_accounts(self):

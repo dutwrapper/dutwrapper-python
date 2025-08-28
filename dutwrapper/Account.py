@@ -5,7 +5,7 @@ import requests
 from requests.structures import CaseInsensitiveDict
 	
 import dutwrapper.__Variables__ as Variables
-from dutwrapper.Utils import *
+from dutwrapper import Utils
 
 class Session:
     def __init__(self, session_id: str = None, view_state: str = None, view_state_generator: str = None):
@@ -18,7 +18,7 @@ class Session:
     
     def ensure_logged_in(self):
         self.ensure_valid_session_id()
-        if (is_logged_in(session=self) != 0):
+        if (is_logged_in(session=self) != True):
             raise Exception('You are not logged in.')
         return
     
@@ -46,13 +46,13 @@ def generate_new_session() -> Session:
             session.session_id = temp['ASP.NET_SessionId']
         # Get ViewState and ViewStateGenerator
         soup = BeautifulSoup(response.content, 'lxml')
-        session.view_state = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATE')
-        session.view_state_generator = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATEGENERATOR')
+        session.view_state = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATE')
+        session.view_state_generator = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATEGENERATOR')
         return session
     else:
         return Session(None, None, None)
 
-def is_logged_in(session: Session) -> int:
+def is_logged_in(session: Session) -> bool:
     """
     Check if your account is logged in from sv.dut.udn.vn.
 
@@ -69,15 +69,15 @@ def is_logged_in(session: Session) -> int:
         response = requests.get(Variables.URL_ACCOUNTCHECKLOGIN, headers=headers) 
         # If returned code 2xx, return LoggedIn (0)
         if (response.status_code in [200, 204]):
-            return 0
+            return True
         # TODO: We need to seperate login status here, but we don't have any document about this. So, just return NotLoggedIn (1)
         else:
-            return 1
+            return False
     except Exception as ex:
         # If something went wrong, return anything to NotLoggedIn (1)
         if (Variables.DEBUG_LOG):
             print(ex)
-        return 1
+        return True
 
 def login(session: Session, username: str, password: str):
     """
@@ -98,7 +98,8 @@ def login(session: Session, username: str, password: str):
     # print(self.SessionID)
     headers = CaseInsensitiveDict()
     # headers["Cookie"] = "ASP.NET_SessionId={id};".format(id=session.session_id)
-    headers["Cookie"] = session.export_session_id_to_cookie()
+    headers['Cookie'] = session.export_session_id_to_cookie()
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
     requests.post(Variables.URL_ACCOUNTLOGIN, data=dataRequest, headers=headers)
     #
     return
@@ -146,7 +147,7 @@ def __string2ExamSchedule__(src: str):
                 date = date.replace(hour=int(splitted[0]))
             if len(splitted) > 1:
                 date = date.replace(minute=int(splitted[1]))
-    date = date - timedelta(hours=7) + timedelta(hours=GetRegionGMT())
+    date = date - timedelta(hours=7) + timedelta(hours=Utils.DateTimeUtils.CurrentGMT())
     # Return
     result = {}
     result['examDate'] = round(datetime.timestamp(date) * 1000, 0)
@@ -266,8 +267,7 @@ def fetch_subject_fee(session: Session, year: int = 20, semester: int = 1, study
             item['credit'] = float(cell[3].text)  # type: ignore
             item['is_high_quality'] = True if ('GridCheck' in cell[4].attrs.get('class')) else False
             item['price'] = 0 if (cell[5].text == None or len(cell[5].text) == 0) else float(cell[5].text.replace(',', ''))
-            item['is_debt'] = True if ('GridCheck' in cell[6].attrs.get('class')) else False
-            item['is_restudy'] = True if ('GridCheck' in cell[7].attrs.get('class')) else False
+            item['is_restudy'] = True if ('GridCheck' in cell[6].attrs.get('class')) else False
             item['verified_payment_at'] = cell[8].text
             result.append(item)
     except Exception as ex:
@@ -292,36 +292,33 @@ def fetch_student_information(session: Session):
         webHTML = requests.get(Variables.URL_ACCOUNTINFORMATION, headers=headers)
 
         soup = BeautifulSoup(webHTML.content, 'lxml')
-        result['name'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHoTen')
-        result['date_of_birth'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgaySinh')
-        result['birth_pace'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiSinh')
-        result['gender'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtGioiTinh')
-        result['ethnicity'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDanToc')
-        result['nationality'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuocTich')
-        result['national_id_card'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCMND')
-        result['national_id_card_issue_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgayCap')
-        result['national_id_card_issue_place'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiCap')
-        result['citizen_id_card'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCCCD')
-        result['citizen_id_card_issue_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNcCCCD')
-        result['religion'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTonGiao')
-        result['account_bank_id'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtTKNHang')
-        result['account_bank_name'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgHang')
-        result['hi_id'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoBHYT')
-        result['hi_expire_date'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHanBHYT')
-        result['specialization'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtNganh')
-        result['school_class'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtLop')
-        result['training_program_plan'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCTDT')
-        result['training_program_plan_2'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCT2')
-        result['school_email'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail1')
-        result['personal_email'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail2')
-        result['school_email_init_pass'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMK365')
-        result['facebook_url'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtFace')
-        result['phone_number'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtPhone')
-        result['address'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtCuTru')
-        result['address_from'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDCCua')
-        result['address_city'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTinhCTru')
-        result['address_district'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuanCTru')
-        result['address_sub_district'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboPhuongCTru')
+        result['name'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHoTen')
+        result['date_of_birth'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgaySinh')
+        result['birth_pace'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiSinh')
+        result['gender'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtGioiTinh')
+        result['ethnicity'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDanToc')
+        result['nationality'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuocTich')
+        result['citizen_id_card'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCCCD')
+        result['citizen_id_card_issue_date'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNcCCCD')
+        result['religion'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTonGiao')
+        result['account_bank_id'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtTKNHang')
+        result['account_bank_name'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgHang')
+        result['hi_id'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoBHYT')
+        result['hi_expire_date'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHanBHYT')
+        result['hi_free_issue'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_chkBHYT')
+        result['specialization'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtNganh')
+        result['school_class'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtLop')
+        result['training_program_plan'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCTDT')
+        result['training_program_plan_2'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCT2')
+        result['school_email'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail1')
+        result['personal_email'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail2')
+        result['school_email_init_pass'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMK365')
+        result['facebook_url'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtFace')
+        result['phone_number'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtPhone')
+        result['address'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtCuTru')
+        result['address_from'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDCCua')
+        result['address_city'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTinhCTru')
+        result['address_district'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboPhuongCTru')
         result['student_id'] = __getStudentID__(soup)
     except Exception as ex:
         if (Variables.DEBUG_LOG):
@@ -347,7 +344,7 @@ def __fetch_training_status_summary__(soup: BeautifulSoup):
             if (t1Result['school_year_start'] == None):
                 t1Result['school_year_start'] = cell[0].text
                 t1Result['school_year_current'] = cell[0].text
-            if (StringUtils.is_null_or_empty(cell[cell_len - 1]) and StringUtils.is_null_or_empty(cell[cell_len - 2]) and StringUtils.is_null_or_empty(cell[cell_len - 3])):
+            if (Utils.StringUtils.is_null_or_empty(cell[cell_len - 1]) and Utils.StringUtils.is_null_or_empty(cell[cell_len - 2]) and Utils.StringUtils.is_null_or_empty(cell[cell_len - 3])):
                 t1Result['school_year_current'] = cell[0].text
                 t1Result['credit_collected'] = cell[cell_len - 3].text
                 t1Result['avg_train_score_4'] = float(cell[cell_len - 2].text.strip())
@@ -363,15 +360,15 @@ def __fetch_training_status_summary__(soup: BeautifulSoup):
 def __fetch_training_status_graduate__(soup: BeautifulSoup):
     result = {}
     try:
-        result['has_sig_physical_education'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkGDTC')
-        result['has_sig_national_defense_education'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkQP')
-        result['has_sig_english'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCNN')
-        result['has_sig_it'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCTH')
-        result['has_qualified_graduate'] = BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCNTN')
-        result['rewards_info'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKT')
-        result['discipline_info'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKL')
-        result['eligible_graduation_thesis_status'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtInfo')
-        result['eligible_graduation_status'] = BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtCNTN')
+        result['has_sig_physical_education'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkGDTC')
+        result['has_sig_national_defense_education'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkQP')
+        result['has_sig_english'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCNN')
+        result['has_sig_it'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCTH')
+        result['has_qualified_graduate'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCNTN')
+        result['rewards_info'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKT')
+        result['discipline_info'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKL')
+        result['eligible_graduation_thesis_status'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtInfo')
+        result['eligible_graduation_status'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtCNTN')
     except Exception as ex:
         result = {}
         print(ex)
@@ -393,17 +390,18 @@ def __fetch_training_status_subject_result__(soup: BeautifulSoup):
             cellData['name'] = cell[4].text
             cellData['credit'] = int(cell[5].text)
             cellData['point_formula'] = cell[6].text
-            cellData['point_bt'] = float(cell[7].text) if (StringUtils.is_null_or_empty(cell[7].text)) else None
-            cellData['point_bv'] = float(cell[8].text) if (StringUtils.is_null_or_empty(cell[8].text)) else None
-            cellData['point_cc'] = float(cell[9].text) if (StringUtils.is_null_or_empty(cell[9].text)) else None
-            cellData['point_ck'] = float(cell[10].text) if (StringUtils.is_null_or_empty(cell[10].text)) else None
-            cellData['point_gk'] = float(cell[11].text) if (StringUtils.is_null_or_empty(cell[11].text)) else None
-            cellData['point_qt'] = float(cell[12].text) if (StringUtils.is_null_or_empty(cell[12].text)) else None
-            cellData['point_th'] = float(cell[13].text) if (StringUtils.is_null_or_empty(cell[13].text)) else None
-            cellData['point_tt'] = float(cell[14].text) if (StringUtils.is_null_or_empty(cell[14].text)) else None
-            cellData['result_t10'] = float(cell[15].text) if (StringUtils.is_null_or_empty(cell[15].text)) else None
-            cellData['result_t4'] = float(cell[16].text) if (StringUtils.is_null_or_empty(cell[16].text)) else None
+            cellData['point_bt'] = float(cell[7].text) if (Utils.StringUtils.is_null_or_empty(cell[7].text)) else None
+            cellData['point_bv'] = float(cell[8].text) if (Utils.StringUtils.is_null_or_empty(cell[8].text)) else None
+            cellData['point_cc'] = float(cell[9].text) if (Utils.StringUtils.is_null_or_empty(cell[9].text)) else None
+            cellData['point_ck'] = float(cell[10].text) if (Utils.StringUtils.is_null_or_empty(cell[10].text)) else None
+            cellData['point_gk'] = float(cell[11].text) if (Utils.StringUtils.is_null_or_empty(cell[11].text)) else None
+            cellData['point_qt'] = float(cell[12].text) if (Utils.StringUtils.is_null_or_empty(cell[12].text)) else None
+            cellData['point_th'] = float(cell[13].text) if (Utils.StringUtils.is_null_or_empty(cell[13].text)) else None
+            cellData['point_tt'] = float(cell[14].text) if (Utils.StringUtils.is_null_or_empty(cell[14].text)) else None
+            cellData['result_t10'] = float(cell[15].text) if (Utils.StringUtils.is_null_or_empty(cell[15].text)) else None
+            cellData['result_t4'] = float(cell[16].text) if (Utils.StringUtils.is_null_or_empty(cell[16].text)) else None
             cellData['result_by_char'] = cell[17].text
+            cellData['is_restudy'] = any(cell[4].text in f for f in result)
             result.append(cellData)
     except Exception as ex:
         if (Variables.DEBUG_LOG):

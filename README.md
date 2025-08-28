@@ -8,7 +8,7 @@ An unofficial wrapper at [sv.dut.udn.vn - Da Nang University of Science and Tech
 - Badge provided by [shields.io](https://shields.io/)
 
 ## Requirements
-- Python 3.10 (3.8 still works, but need to modify if you got errors).
+- [Python 3.13.7 is recommend](https://www.python.org/downloads/release/python-3137/) (3.8 still works, but need to modify if you got errors).
 
 ## FAQ
 
@@ -17,7 +17,7 @@ An unofficial wrapper at [sv.dut.udn.vn - Da Nang University of Science and Tech
 - `draft`: This branch will used for update my progress and it is unstable. Use it at your own risk.
 
 ### I received error about login while running AccountTest?
-- Make sure you have `dut_account` variable set with syntax `studentid|password`. This will ensure secure when testing project.
+- Make sure you have `dut_account` variable set with syntax `studentid|password`. You can set this via `.env` file (python will prefer this first) or OS Enviroment Variable. This will ensure secure when testing project.
 
 ### Where can I find Wiki for this library?
 - Not now. Be patient.

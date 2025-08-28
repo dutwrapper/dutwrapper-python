@@ -2,6 +2,12 @@
 
 This file will list all version log for modified, added or removed functions of dutwrapper (Python language).
 
+## 1.9.0
+- Changed all domains to `https` (since student page has been upgraded to `https`).
+- Added `Student affairs`, `Examination`, `Tuition fee` and `Statute and Regulation` in `NewsType`.
+- Fixed an issue (since page changed) cause exception in `fetch_subject_fee`.
+- Improved unittest.
+
 ## 1.8.0
 - Added `fetch_account_training_status()` function in `Accounts`.
 - Adjust and resolved issues in all functions in `Accounts`.

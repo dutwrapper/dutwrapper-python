@@ -1,12 +1,21 @@
 
 from bs4 import BeautifulSoup
+from datetime import datetime, timezone, timedelta
 import time
 
 # Import configured variables
 import dutwrapper.__Variables__ as Variables
 
-def GetRegionGMT():
-    return round((-time.timezone) / 3600, 1)
+class DateTimeUtils(object):
+    def CurrentGMT() -> int:
+        return round((-time.timezone) / 3600, 1)
+
+    def CurrentTimeAsUnix() -> int:
+        return int(time.time_ns() // 1_000_000)
+    
+    def UTCFrom(year: int, month: int = 1, day: int = 1, hour: int = 0, minute: int = 0, second: int = 0, millisecond: int = 0) -> int:
+        utc = timezone(timedelta())
+        return int(datetime.timestamp(datetime(year, month, day, hour, minute, second, millisecond, tzinfo=utc)) * 1000)
 
 class StringUtils(object):
     @classmethod

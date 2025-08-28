@@ -1,19 +1,69 @@
 
 from bs4 import BeautifulSoup, ResultSet
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import enum
 import requests
 
 # Import configured variables
 import dutwrapper.__Variables__ as Variables
-from dutwrapper.Utils import *
+from dutwrapper import Utils
 
 class NewsType(enum.Enum):
-    Global = 'Global'
-    Subjects = 'Subjects'
+    Global = 0
+    Subject = 1
+    StudentAffairs = 2
+    Examination = 3
+    TuitionFee = 4
+    StatuteRegulation = 5
+
+def __get_newstype_data__(newsType: NewsType) -> dict:
+    if (newsType == NewsType.Global):
+        return {
+            'type': 'Global',
+            'news_obj_value': 'global',
+            'url_value': 'CTRTBSV',
+            'tab': '0',
+        }
+    elif (newsType == NewsType.Subject):
+        return {
+            'type': 'Subject',
+            'news_obj_value': 'subject',
+            'url_value': 'CTRTBGV',
+            'tab': '1',
+        }
+    elif (newsType == NewsType.StudentAffairs):
+        return {
+            'type': 'Student Affairs',
+            'news_obj_value': 'student_affairs',
+            'url_value': 'CTRTBSV',
+            'tab': '2',
+        }
+    elif (newsType == NewsType.Examination):
+        return {
+            'type': 'Examination',
+            'news_obj_value': 'examination',
+            'url_value': 'CTRTBSV',
+            'tab': '3',
+        }
+    elif (newsType == NewsType.TuitionFee):
+        return {
+            'type': 'Tuition Fee',
+            'news_obj_value': 'tuition_fee',
+            'url_value': 'CTRTBSV',
+            'tab': '4',
+        }
+    elif (newsType == NewsType.StatuteRegulation):
+        return {
+            'type': 'Statute and Regulation',
+            'news_obj_value': 'statute_regulation',
+            'url_value': 'CTRTBSV',
+            'tab': '5',
+        }
+    else:
+        return {}
 
 # Get news from sv.dut.udn.vn with page you selected.
-def get_news(type: NewsType = NewsType.Global, page: int = 1):
+def get_news(newsType: NewsType = NewsType.Global, page: int = 1):
     """
     Get news from sv.dut.udn.vn.
     For latest news, leave 'page' to default.
@@ -59,14 +109,16 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
 
     # Prepare a result data    
     jsonReturn = []
+    type: dict = __get_newstype_data__(newsType=newsType)
     if (page < 1):
         page = 1
     try:
         # Get elements from sv.dut.dut.vn
-        if (type == NewsType.Global):
-            webHTML = requests.get(Variables.URL_NEWSGENERAL.format(page = page))
-        else:
-            webHTML = requests.get(Variables.URL_NEWSSUBJECTS.format(page = page))
+        webHTML = requests.get(Variables.URL_NEWS.format(
+            news=type['url_value'],
+            page=page,
+            tab=type['tab']
+        ))
         # Convert to BeautifulSoup
         soup = BeautifulSoup(webHTML.content, 'lxml')
         # Find all element groups in html.
@@ -76,16 +128,18 @@ def get_news(type: NewsType = NewsType.Global, page: int = 1):
             webElement = news[i].find('div', class_='tbBoxCaption')
             dateText = webElement.find_all('span')[0].text.replace(':', '')
             dateTextSplit = dateText.split('/')
-            date = round(datetime.timestamp(datetime(int(dateTextSplit[2]), int(dateTextSplit[1]), int(dateTextSplit[0]))) * 1000, 0)
+            date = Utils.DateTimeUtils.UTCFrom(int(dateTextSplit[2]), int(dateTextSplit[1]), int(dateTextSplit[0]))
             title = webElement.find_all('span')[1].text
             # Get news content
             content = news[i].find('div', class_='tbBoxContent')
             # Add to jsonReturn
             jsonReturn.append({
-                'date': date,
+                'news_type': type['news_obj_value'],
                 'title': title,
                 'content_html': content.encode_contents().decode('utf-8'),
                 'content': content.text,
+                'date_published': date,
+                'date_fetched': Utils.DateTimeUtils.CurrentTimeAsUnix(),
                 'resources': __getLinks__(content)
             })
     except Exception as ex:
