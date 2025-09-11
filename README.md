@@ -1,6 +1,9 @@
 # DutWrapper
 An unofficial wrapper at [sv.dut.udn.vn - Da Nang University of Science and Technology student page](http://sv.dut.udn.vn).
 
+> [!NOTE]
+> We will deprecate this project on 2025/09/11. Learn more on [project homepage](https://github.com/dutwrapper).
+
 ## Version
 - Release version [![https://github.com/dutwrapper/dutwrapper-python](https://img.shields.io/github/v/release/dutwrapper/dutwrapper-python)](https://github.com/dutwrapper/dutwrapper-python/releases)
 - Pre-release version [![https://github.com/dutwrapper/dutwrapper-python/tree/draft](https://img.shields.io/github/v/tag/dutwrapper/dutwrapper-python?label=pre-release%20tag)](https://github.com/dutwrapper/dutwrapper-python/tree/draft)

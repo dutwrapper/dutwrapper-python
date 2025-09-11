@@ -2,6 +2,11 @@
 
 This file will list all version log for modified, added or removed functions of dutwrapper (Python language).
 
+## 1.9.1
+- IMPORTANT: We will deprecate this project on 2025/09/11. Learn more on [project homepage](https://github.com/dutwrapper).
+- Added option to check if server is online or down.
+- Optimized codes and updated dependencies to latest version.
+
 ## 1.9.0
 - Changed all domains to `https` (since student page has been upgraded to `https`).
 - Added `Student affairs`, `Examination`, `Tuition fee` and `Statute and Regulation` in `NewsType`.

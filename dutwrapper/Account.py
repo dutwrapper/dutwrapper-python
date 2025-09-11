@@ -46,8 +46,8 @@ def generate_new_session() -> Session:
             session.session_id = temp['ASP.NET_SessionId']
         # Get ViewState and ViewStateGenerator
         soup = BeautifulSoup(response.content, 'lxml')
-        session.view_state = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATE')
-        session.view_state_generator = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup=soup, tag='input', id='__VIEWSTATEGENERATOR')
+        session.view_state = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup=soup, tag='input', id='__VIEWSTATE')
+        session.view_state_generator = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup=soup, tag='input', id='__VIEWSTATEGENERATOR')
         return session
     else:
         return Session(None, None, None)
@@ -185,7 +185,7 @@ def fetch_subject_information(session: Session, year: int = 20, semester: int = 
             # Credit
             resultRow['credit'] = float(cell[3].text)
             # Is High Quality
-            resultRow['is_high_quality'] = True if ('GridCheck' in cell[5].attrs.get('class')) else False
+            resultRow['is_high_quality'] = Utils.BeautifulSoupUtils.HasGridCheckAttributeInResultSet(cell[5])
             # Lecturer name
             resultRow['lecturer'] = cell[6].text
             # Schedule study area
@@ -292,33 +292,33 @@ def fetch_student_information(session: Session):
         webHTML = requests.get(Variables.URL_ACCOUNTINFORMATION, headers=headers)
 
         soup = BeautifulSoup(webHTML.content, 'lxml')
-        result['name'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHoTen')
-        result['date_of_birth'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgaySinh')
-        result['birth_pace'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboNoiSinh')
-        result['gender'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtGioiTinh')
-        result['ethnicity'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDanToc')
-        result['nationality'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboQuocTich')
-        result['citizen_id_card'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoCCCD')
-        result['citizen_id_card_issue_date'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNcCCCD')
-        result['religion'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTonGiao')
-        result['account_bank_id'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtTKNHang')
-        result['account_bank_name'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtNgHang')
-        result['hi_id'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtSoBHYT')
-        result['hi_expire_date'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtHanBHYT')
-        result['hi_free_issue'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_chkBHYT')
-        result['specialization'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtNganh')
-        result['school_class'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtLop')
-        result['training_program_plan'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCTDT')
-        result['training_program_plan_2'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'MainContent_CN_txtCT2')
-        result['school_email'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail1')
-        result['personal_email'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMail2')
-        result['school_email_init_pass'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtMK365')
-        result['facebook_url'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtFace')
-        result['phone_number'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtPhone')
-        result['address'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'CN_txtCuTru')
-        result['address_from'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboDCCua')
-        result['address_city'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboTinhCTru')
-        result['address_district'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'select', 'CN_cboPhuongCTru')
+        result['name'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtHoTen')
+        result['date_of_birth'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtNgaySinh')
+        result['birth_pace'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboNoiSinh')
+        result['gender'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtGioiTinh')
+        result['ethnicity'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboDanToc')
+        result['nationality'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboQuocTich')
+        result['citizen_id_card'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtSoCCCD')
+        result['citizen_id_card_issue_date'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtNcCCCD')
+        result['religion'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboTonGiao')
+        result['account_bank_id'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtTKNHang')
+        result['account_bank_name'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtNgHang')
+        result['hi_id'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtSoBHYT')
+        result['hi_expire_date'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtHanBHYT')
+        result['hi_free_issue'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_chkBHYT')
+        result['specialization'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'MainContent_CN_txtNganh')
+        result['school_class'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtLop')
+        result['training_program_plan'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'MainContent_CN_txtCTDT')
+        result['training_program_plan_2'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'MainContent_CN_txtCT2')
+        result['school_email'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtMail1')
+        result['personal_email'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtMail2')
+        result['school_email_init_pass'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtMK365')
+        result['facebook_url'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtFace')
+        result['phone_number'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtPhone')
+        result['address'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'CN_txtCuTru')
+        result['address_from'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboDCCua')
+        result['address_city'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboTinhCTru')
+        result['address_district'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'select', 'CN_cboPhuongCTru')
         result['student_id'] = __getStudentID__(soup)
     except Exception as ex:
         if (Variables.DEBUG_LOG):
@@ -365,10 +365,10 @@ def __fetch_training_status_graduate__(soup: BeautifulSoup):
         result['has_sig_english'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCNN')
         result['has_sig_it'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCCTH')
         result['has_qualified_graduate'] = Utils.BeautifulSoupUtils.getIsCheckedFromBeautifulSoup4(soup, 'input', 'KQRL_chkCNTN')
-        result['rewards_info'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKT')
-        result['discipline_info'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'input', 'KQRL_txtKL')
-        result['eligible_graduation_thesis_status'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtInfo')
-        result['eligible_graduation_status'] = Utils.BeautifulSoupUtils.getValueFromBeautifulSoup4(soup, 'textarea', 'KQRL_txtCNTN')
+        result['rewards_info'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'KQRL_txtKT')
+        result['discipline_info'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'input', 'KQRL_txtKL')
+        result['eligible_graduation_thesis_status'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'textarea', 'KQRL_txtInfo')
+        result['eligible_graduation_status'] = Utils.BeautifulSoupUtils.GetValueInBeautifulSoup(soup, 'textarea', 'KQRL_txtCNTN')
     except Exception as ex:
         result = {}
         print(ex)

@@ -6,6 +6,7 @@ import os
 import dutwrapper.News as News
 from dutwrapper.News import NewsType
 import dutwrapper.Account as Account
+from dutwrapper.Utils import Utils
 
 def pretty_print_dict(item: dict):
     print(json.dumps(item, indent=4, ensure_ascii=False))
@@ -124,4 +125,13 @@ class TestEntirePackage(unittest.TestCase):
 
     def test_accounts(self):
         Test_Account()
+        pass
+
+    def test_utils(self):
+        Utils.EnsureDutSvOnline()
+        print('Done!')
+        Utils.EnsureHaveInternetAccess()
+        print('Done!')
+        print(Utils.GetCurrentSchoolYear())
+        print('Done!')
         pass

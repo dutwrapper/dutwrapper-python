@@ -1,6 +1,5 @@
 
 from bs4 import BeautifulSoup, ResultSet
-from datetime import datetime, timezone, timedelta
 import enum
 import requests
 
@@ -22,42 +21,42 @@ def __get_newstype_data__(newsType: NewsType) -> dict:
             'type': 'Global',
             'news_obj_value': 'global',
             'url_value': 'CTRTBSV',
-            'tab': '0',
+            'tab': 0,
         }
     elif (newsType == NewsType.Subject):
         return {
             'type': 'Subject',
             'news_obj_value': 'subject',
             'url_value': 'CTRTBGV',
-            'tab': '1',
+            'tab': 1,
         }
     elif (newsType == NewsType.StudentAffairs):
         return {
             'type': 'Student Affairs',
             'news_obj_value': 'student_affairs',
             'url_value': 'CTRTBSV',
-            'tab': '2',
+            'tab': 2,
         }
     elif (newsType == NewsType.Examination):
         return {
             'type': 'Examination',
             'news_obj_value': 'examination',
             'url_value': 'CTRTBSV',
-            'tab': '3',
+            'tab': 3,
         }
     elif (newsType == NewsType.TuitionFee):
         return {
             'type': 'Tuition Fee',
             'news_obj_value': 'tuition_fee',
             'url_value': 'CTRTBSV',
-            'tab': '4',
+            'tab': 4,
         }
     elif (newsType == NewsType.StatuteRegulation):
         return {
             'type': 'Statute and Regulation',
             'news_obj_value': 'statute_regulation',
             'url_value': 'CTRTBSV',
-            'tab': '5',
+            'tab': 5,
         }
     else:
         return {}
@@ -122,13 +121,13 @@ def get_news(newsType: NewsType = NewsType.Global, page: int = 1):
         # Convert to BeautifulSoup
         soup = BeautifulSoup(webHTML.content, 'lxml')
         # Find all element groups in html.
-        news = soup.findAll('div', {'class': 'tbBox'})
+        news = soup.find_all('div', {'class': 'tbBox'})
         for i in range(0, len(news), 1):
             # Get news date and title
             webElement = news[i].find('div', class_='tbBoxCaption')
             dateText = webElement.find_all('span')[0].text.replace(':', '')
             dateTextSplit = dateText.split('/')
-            date = Utils.DateTimeUtils.UTCFrom(int(dateTextSplit[2]), int(dateTextSplit[1]), int(dateTextSplit[0]))
+            date = Utils.DateTimeUtils.FromUTC(int(dateTextSplit[2]), int(dateTextSplit[1]), int(dateTextSplit[0]))
             title = webElement.find_all('span')[1].text
             # Get news content
             content = news[i].find('div', class_='tbBoxContent')
